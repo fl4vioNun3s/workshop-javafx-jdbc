@@ -3,7 +3,9 @@ package gui;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.Set;
 
 import db.DbException;
 import gui.listeners.DataChangeListener;
@@ -18,6 +20,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import model.entities.Department;
+import model.exceptions.ValidationException;
 import model.services.DepartmentService;
 
 public class DepartmentFormController implements Initializable {
@@ -67,6 +70,9 @@ public class DepartmentFormController implements Initializable {
 			notifyDataChangeListeners();
 			Utils.currentStage(event).close();
 		} 
+		catch (ValidationException e) {
+			setErrorMessages(e.getErrors());
+		}
 		catch (DbException e) {
 			Alerts.showAlert("Error saving object", null, e.getMessage(), AlertType.ERROR);
 		}
@@ -80,8 +86,23 @@ public class DepartmentFormController implements Initializable {
 
 	private Department getFormData() {
 		Department obj = new Department();
+		ValidationException exception = new ValidationException("ValidationError");
+		
 		obj.setId(Utils.tryParseToInt(txtId.getText()));
+		
+		/*Se a caixa de texto for nula ou estiver vazia.
+		* .trim() é para eliminar qualquer espaço em branco que esteja no início ou no final*/
+		if(txtName.getText() == null || txtName.getText().trim().equals("")) {
+			exception.addError("name","Field can't be empty");
+		}
+		
+		//Se no map de erros há pelo menos um erro.
+		if(exception.getErrors().size() > 0) {
+			throw exception;
+		}
 		obj.setName(txtName.getText());
+		
+		
 		return obj;
 	}
 
@@ -111,5 +132,14 @@ public class DepartmentFormController implements Initializable {
 														// converter o Id para String.
 		txtName.setText(entity.getName());
 
+	}
+	
+	private void setErrorMessages(Map<String,String> errors) {
+		Set<String> fields = errors.keySet();
+		
+		//Se existir a chave name, quer dizer que há um erro.
+		if(fields.contains("name")) {
+			labelErrorName.setText(errors.get("name"));
+		}
 	}
 }
